@@ -1,5 +1,5 @@
 xset s off -dpms
-/usr/local/bin/numlockx on &
+/usr/bin/numlockx on &
 /home/caisse/stopkiosk &
-/usr/local/bin/chrome --chrome --new-window --fullscreen --start-maximized --kiosk http://www.osorio.me/
+/usr/bin/chromium --chrome --new-window --fullscreen --start-maximized --kiosk http://www.osorio.me/
 xset s 3600 3600 &
