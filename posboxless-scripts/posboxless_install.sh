@@ -1,5 +1,6 @@
 #!/bin/sh
 set -e
+set -x
 
 ### Set some variables
 #####################################
@@ -19,16 +20,21 @@ first_stage() {
     ## Init apt-get
     ###############
     echo "Initialize apt-get"
-    apt-get update 1>/dev/null 2>&1
+    apt-get update
     echo "Upgrade existing packages"
-    apt-get -y upgrade 1>/dev/null 2>&1
+    apt-get -y upgrade
 
     ## Install packages required for this script
     ############################################
-    apt-get install git curl unzip 1>/dev/null 2>&1
+    apt-get install -y git curl unzip adduser
+
+    if [ ! -e /home/pi ]; then
+        echo "You need to create the user ${POS_USER}"
+        exit 1
+    fi
 
     echo "Clone master dir"
-    git clone --no-local --no-checkout --depth 1 ${REPO} odoo
+    git clone --depth 1 ${REPO} "odoo"
 
     cd ${__odoo_dir}
 
@@ -73,7 +79,16 @@ first_stage() {
             etc/fstab \
             etc/init_posbox_image.sh \
             etc/systemd/system/ramdisks.service \
-            home/caisse/odoo/addons/point_of_sale/tools/posbox/configuration/setup_ramdisks.sh
+            configuration/setup_ramdisks.sh
+
+    find * -type f | while read line; do
+        _path=$(dirname $line)
+        if [ ! -e "/$_path" ]; then
+            mkdir -p "/${_path}"
+        fi
+        cp -p "$line" "/${_path}"
+    done
+    systemctl daemon-reload
 }
 
 second_stage() {
@@ -135,15 +150,16 @@ second_stage() {
         python3-unittest2 \
         python3-simplejson \
         python3-usb \
-        python3-evedev\
+        python3-evdev\
         python3-cups"
 
     echo "Install dependencies"
     apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install ${PKGS_TO_INSTALL}
     echo "Start pgsql"
     pg_lsclusters
-    systemctl start postgresql@9.6-main
-    systemctl status postgresql@9.6-main
+
+    systemctl start postgresql
+    systemctl status postgresql
 
     echo "configure pgsql"
     sudo -u postgres createuser -s pi
@@ -185,3 +201,6 @@ second_stage() {
     echo "addons/hw_drivers/drivers/" > /home/${POS_USER}/odoo/.git/info/exclude
 
 }
+
+first_stage
+second_stage
