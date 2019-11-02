@@ -153,12 +153,12 @@ second_stage() {
         python${PY_VER}-html2text \
         python${PY_VER}-unittest2 \
         python${PY_VER}-usb \
-        python${PY_VER}-evdev\
         python${PY_VER}-simplejson
         python${PY_VER}-yaml \
         python${PY_VER}-pychart \
         python${PY_VER}-cups"
 
+#        python${PY_VER}-evdev\
     echo "Install dependencies"
     DEBIAN_FRONTEND=noninteractiv apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install ${PKGS_TO_INSTALL}
     echo "Start pgsql"
@@ -178,13 +178,14 @@ second_stage() {
     gatt \
     v4l2 \
     polib \
-    pycups"
+    pycups\
+    evdev"
 
     pip${PY_VER} install ${PIP_TO_INSTALL}
 
-    /sbin/groupadd usbusers
-    /sbin/usermod -a -G usbusers ${POS_USER}
-    /sbin/usermod -a -G lp ${POS_USER}
+    groupadd usbusers
+    usermod -a -G usbusers ${POS_USER}
+    usermod -a -G lp ${POS_USER}
     mkdir /var/log/odoo
     chown ${POS_USER}:${POS_USER} /var/log/odoo
     chown ${POS_USER}:${POS_USER} -R /home/${POS_USER}/odoo/
@@ -197,7 +198,7 @@ second_stage() {
 
     echo "* * * * * rm /var/run/odoo/sessions/*" | crontab -
 
-    /sbin/update-rc.d timesyncd defaults
+    update-rc.d timesyncd defaults
     systemctl daemon-reload
 #    systemctl disable ramdisks.service
 #    systemctl disable dphys-swapfile.service
@@ -208,5 +209,5 @@ second_stage() {
 
 }
 
-first_stage
+#first_stage
 second_stage
