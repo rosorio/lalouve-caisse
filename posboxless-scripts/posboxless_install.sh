@@ -11,10 +11,11 @@ POS_USER="pi"
 MOUNT_POINT="${__odoo_dir}/root_mount"
 OVERWRITE_FILES_BEFORE_INIT_DIR="${__odoo_dir}/overwrite_before_init"
 OVERWRITE_FILES_AFTER_INIT_DIR="${__odoo_dir}/overwrite_after_init"
-VERSION=11.0
+VERSION=8.0
 REPO=https://github.com/odoo/odoo.git
 CLONE_DIR="${OVERWRITE_FILES_BEFORE_INIT_DIR}/home/${POS_USER}/odoo"
 USR_BIN="${OVERWRITE_FILES_BEFORE_INIT_DIR}/usr/bin/"
+PY_VER=""
 
 first_stage() {
     ## Init apt-get
@@ -26,7 +27,7 @@ first_stage() {
 
     ## Install packages required for this script
     ############################################
-    apt-get install -y git curl unzip adduser
+    DEBIAN_FRONTEND=noninteractive apt-get install -y git curl unzip adduser sudo
 
     if [ ! -e /home/pi ]; then
         echo "You need to create the user ${POS_USER}"
@@ -44,11 +45,13 @@ first_stage() {
     cd "${CLONE_DIR}"
     git config core.sparsecheckout true
 
+
     echo "addons/web
-    addons/hw_*
-    addons/point_of_sale/tools/posbox/configuration
-    odoo/
-    odoo-bin" | tee --append .git/info/sparse-checkout > /dev/null
+addons/web_kanban
+addons/hw_*
+addons/point_of_sale/tools/posbox/configuration
+openerp/
+odoo.py" | tee --append .git/info/sparse-checkout > /dev/null
     git read-tree -mu HEAD
 
     cd "${_odoo__dir}"
@@ -66,10 +69,7 @@ first_stage() {
     echo "Copy init files..."
     mkdir -p "${MOUNT_POINT}" #-p: no error if existing
     cp -a "${OVERWRITE_FILES_BEFORE_INIT_DIR}"/* "${MOUNT_POINT}"
-    # get rid of the git clone
-    rm -rf "${CLONE_DIR}"
-    # and the ngrok usr/bin
-    rm -rf "${OVERWRITE_FILES_BEFORE_INIT_DIR}/usr"
+    cp -a "${OVERWRITE_FILES_AFTER_INIT_DIR}"/* "${MOUNT_POINT}"
 
     echo "cleanup config files"
     cd "${MOUNT_POINT}"
@@ -79,7 +79,9 @@ first_stage() {
             etc/fstab \
             etc/init_posbox_image.sh \
             etc/systemd/system/ramdisks.service \
-            configuration/setup_ramdisks.sh
+            configuration/setup_ramdisks.sh \
+            etc/ld.so.preload
+
 
     find * -type f | while read line; do
         _path=$(dirname $line)
@@ -88,6 +90,7 @@ first_stage() {
         fi
         cp -p "$line" "/${_path}"
     done
+
     systemctl daemon-reload
 }
 
@@ -111,50 +114,53 @@ second_stage() {
         swig \
         console-data \
         adduser \
+        usbutils \
         postgresql \
         python-cups \
-        python3 \
-        python3-pyscard \
-        python3-urllib3 \
-        python3-dateutil \
-        python3-decorator \
-        python3-docutils \
-        python3-feedparser \
-        python3-pil \
-        python3-jinja2 \
-        python3-ldap3 \
-        python3-lxml \
-        python3-mako \
-        python3-mock \
-        python3-openid \
-        python3-psutil \
-        python3-psycopg2 \
-        python3-babel \
-        python3-pydot \
-        python3-pyparsing \
-        python3-pypdf2 \
-        python3-reportlab \
-        python3-requests \
-        python3-simplejson \
-        python3-tz \
-        python3-vatnumber \
-        python3-werkzeug \
-        python3-serial \
-        python3-pip \
-        python3-dev \
-        python3-netifaces \
-        python3-passlib \
-        python3-libsass \
-        python3-qrcode \
-        python3-html2text \
-        python3-unittest2 \
-        python3-simplejson \
-        python3-usb \
-        python3-evdev\
-        python3-cups"
+        python${PY_VER} \
+        python${PY_VER}-pyscard \
+        python${PY_VER}-urllib3 \
+        python${PY_VER}-dateutil \
+        python${PY_VER}-decorator \
+        python${PY_VER}-docutils \
+        python${PY_VER}-feedparser \
+        python${PY_VER}-pil \
+        python${PY_VER}-jinja2 \
+        python${PY_VER}-ldap3 \
+        python${PY_VER}-lxml \
+        python${PY_VER}-mako \
+        python${PY_VER}-mock \
+        python${PY_VER}-openid \
+        python${PY_VER}-psutil \
+        python${PY_VER}-psycopg2 \
+        python${PY_VER}-babel \
+        python${PY_VER}-pydot \
+        python${PY_VER}-pyparsing \
+        python${PY_VER}-pypdf2 \
+        python${PY_VER}-reportlab \
+        python${PY_VER}-requests \
+        python${PY_VER}-simplejson \
+        python${PY_VER}-tz \
+        python${PY_VER}-vatnumber \
+        python${PY_VER}-werkzeug \
+        python${PY_VER}-serial \
+        python${PY_VER}-pip \
+        python${PY_VER}-dev \
+        python${PY_VER}-netifaces \
+        python${PY_VER}-passlib \
+        python${PY_VER}-libsass \
+        python${PY_VER}-qrcode \
+        python${PY_VER}-html2text \
+        python${PY_VER}-unittest2 \
+        python${PY_VER}-usb \
+        python${PY_VER}-evdev\
+        python${PY_VER}-simplejson
+        python${PY_VER}-yaml \
+        python${PY_VER}-pychart \
+        python${PY_VER}-cups"
 
     echo "Install dependencies"
-    apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install ${PKGS_TO_INSTALL}
+    DEBIAN_FRONTEND=noninteractiv apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install ${PKGS_TO_INSTALL}
     echo "Start pgsql"
     pg_lsclusters
 
@@ -164,7 +170,7 @@ second_stage() {
     echo "configure pgsql"
     sudo -u postgres createuser -s pi
     apt-get clean
-    localepurge
+#    localepurge
 
     ## Use PIP to install a few stuff
     #################################
@@ -174,11 +180,11 @@ second_stage() {
     polib \
     pycups"
 
-    pip3 install ${PIP_TO_INSTALL}
+    pip${PY_VER} install ${PIP_TO_INSTALL}
 
-    groupadd usbusers
-    usermod -a -G usbusers ${POS_USER}
-    usermod -a -G lp ${POS_USER}
+    /sbin/groupadd usbusers
+    /sbin/usermod -a -G usbusers ${POS_USER}
+    /sbin/usermod -a -G lp ${POS_USER}
     mkdir /var/log/odoo
     chown ${POS_USER}:${POS_USER} /var/log/odoo
     chown ${POS_USER}:${POS_USER} -R /home/${POS_USER}/odoo/
@@ -191,10 +197,10 @@ second_stage() {
 
     echo "* * * * * rm /var/run/odoo/sessions/*" | crontab -
 
-    update-rc.d timesyncd defaults
+    /sbin/update-rc.d timesyncd defaults
     systemctl daemon-reload
-    systemctl disable ramdisks.service
-    systemctl disable dphys-swapfile.service
+#    systemctl disable ramdisks.service
+#    systemctl disable dphys-swapfile.service
     systemctl enable ssh
 
     echo "disable_overscan=1" >> /boot/config.txt
