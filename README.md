@@ -6,3 +6,8 @@ Ce répo contiens les fichiers de configuration pour un PC caisse sous *nix.
  * config_chromium_Default : fichiers de configuration chrome pour un affichage plein ecran
  * css-caisse : extension chrome pour l'affichage d'un bouton 'ferner' dynamiquement
  * sddm_themes : theme sddm pour la caisse
+
+## Caisse Posboxless
+
+Dans le dossier posboxless-scripts se trouvent les fichiers nécésaires à l'installation d'une
+posbox sur une Debian standard.
